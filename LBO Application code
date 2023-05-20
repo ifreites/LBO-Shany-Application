@@ -1,0 +1,100 @@
+Here below the code for a Leverage Buy Out Application
+
+library(shiny)
+
+# Define the user interface
+ui <- fluidPage(
+  titlePanel("LBO ROI Calculator"),
+  sidebarLayout(
+    sidebarPanel(
+      numericInput("target_revenue_acq", "Target Revenue at Acquisition:", value = 800000),
+      numericInput("ebitda_margin_acq", "EBITDA Margin at Acquisition (%):", value = 35),
+      numericInput("ebitda_multiple_acq", "EBITDA Multiple at Acquisition:", value = 6),
+      numericInput("target_revenue_exit", "Target Revenue at Exit:", value = 1000000),
+      numericInput("ebitda_margin_exit", "EBITDA Margin at Exit (%):", value = 30),
+      numericInput("ebitda_multiple_exit", "EBITDA Multiple at Exit:", value = 8),
+      sliderInput("leverage_ratio", "Leverage Ratio (%):", min = 0, max = 100, value = 50),
+      numericInput("annual_interest_rate", "Expected Annual Interest Rate (%):", value = 5),
+      numericInput("holding_period", "Holding Period (in years):", value = 5),
+      actionButton("calculate_button", "Calculate")
+    ),
+    mainPanel(
+      h3("Results:"),
+      verbatimTextOutput("initial_investment_output"),
+      verbatimTextOutput("debt_investors_output"),
+      verbatimTextOutput("pe_investment_output"),
+      verbatimTextOutput("annual_interest_output"),
+      verbatimTextOutput("total_interest_output"),
+      verbatimTextOutput("exit_value_output"),
+      verbatimTextOutput("pe_proceeds_output"),
+      verbatimTextOutput("gain_loss_output"),
+      verbatimTextOutput("pe_return_output")
+    )
+  )
+)
+
+# Define the server function
+server <- function(input, output) {
+  observeEvent(input$calculate_button, {
+    target_revenue_acq <- input$target_revenue_acq
+    ebitda_margin_acq <- input$ebitda_margin_acq / 100
+    ebitda_multiple_acq <- input$ebitda_multiple_acq
+    target_revenue_exit <- input$target_revenue_exit
+    ebitda_margin_exit <- input$ebitda_margin_exit / 100
+    ebitda_multiple_exit <- input$ebitda_multiple_exit
+    leverage_ratio <- input$leverage_ratio / 100
+    annual_interest_rate <- input$annual_interest_rate / 100
+    holding_period <- input$holding_period
+    
+    target_ebitda_acq <- target_revenue_acq * ebitda_margin_acq
+    initial_investment_consideration <- target_ebitda_acq * ebitda_multiple_acq
+    debt_investors <- initial_investment_consideration * leverage_ratio
+    pe_investment <- initial_investment_consideration * (1 - leverage_ratio)
+    annual_interest <- debt_investors * annual_interest_rate
+    total_interest <- annual_interest * holding_period
+    target_ebitda_exit <- target_revenue_exit * ebitda_margin_exit
+    exit_value <- target_ebitda_exit * ebitda_multiple_exit
+    pe_proceeds <- exit_value - debt_investors - total_interest
+    gain_loss <- pe_proceeds - pe_investment
+    pe_return <- (gain_loss / pe_investment) * 100
+    
+    output$initial_investment_output <- renderPrint({
+      paste0("Initial Investment Consideration: $", format(initial_investment_consideration, big.mark = ",", scientific = FALSE))
+    })
+    
+    output$debt_investors_output <- renderPrint({
+      paste0("Debt Investors: $", format(debt_investors, big.mark = ",", scientific = FALSE))
+    })
+    
+    output$pe_investment_output <- renderPrint({
+      paste0("PE Investment: $", format(pe_investment, big.mark = ",", scientific = FALSE))
+    })
+    
+    output$annual_interest_output <- renderPrint({
+      paste0("Annual Interest: $", format(annual_interest, big.mark = ",", scientific = FALSE))
+    })
+    
+    output$total_interest_output <- renderPrint({
+      paste0("Total Interest Paid at Exit (Holding Period): $", format(total_interest, big.mark = ",", scientific = FALSE))
+    })
+    
+    output$exit_value_output <- renderPrint({
+      paste0("Exit Value: $", format(exit_value, big.mark = ",", scientific = FALSE))
+    })
+    
+    output$pe_proceeds_output <- renderPrint({
+      paste0("PE Proceeds at Exit: $", format(pe_proceeds, big.mark = ",", scientific = FALSE))
+    })
+    
+    output$gain_loss_output <- renderPrint({
+      paste0("Gain or (Loss) of Sale of PE Investment: $", format(gain_loss, big.mark = ",", scientific = FALSE))
+    })
+    
+    output$pe_return_output <- renderPrint({
+      paste0("PE Return %: ", format(pe_return, digits = 2), "%")
+    })
+  })
+}
+
+# Run the Shiny application
+shinyApp(ui = ui, server = server)
